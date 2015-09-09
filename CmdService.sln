@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CmdService", "CmdService\CmdService.vcxproj", "{EB0FC868-87F6-44E3-890D-38B94451E4E1}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EB0FC868-87F6-44E3-890D-38B94451E4E1}.Debug|Win32.ActiveCfg = Debug|Win32
+		{EB0FC868-87F6-44E3-890D-38B94451E4E1}.Debug|Win32.Build.0 = Debug|Win32
+		{EB0FC868-87F6-44E3-890D-38B94451E4E1}.Release|Win32.ActiveCfg = Release|Win32
+		{EB0FC868-87F6-44E3-890D-38B94451E4E1}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
