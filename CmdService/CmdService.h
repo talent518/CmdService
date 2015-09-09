@@ -3,6 +3,17 @@
 
 #include "BaseService.h"
 
+typedef struct _execParam{
+	TCHAR keyName[MAX_PATH];
+	TCHAR curDirectory[MAX_PATH];
+	TCHAR cmdLine[MAX_PATH];
+	TCHAR logFile[MAX_PATH];
+
+	HANDLE processId;
+
+	struct _execParam *next;
+} EXECPARAM, *PEXECPARAM;
+
 class CmdService : public BaseService {
 public:
 	CmdService();
@@ -17,6 +28,11 @@ public:
 private:
 	volatile bool m_bPaused;
 	volatile bool m_bRunning;
+
+	PEXECPARAM pHeadExecParam;
+	PDWORD dwThreadId;
+	PHANDLE hThread;
+	int nCmdSize;
 };
 
 extern CmdService cmdService;

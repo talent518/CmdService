@@ -4,6 +4,7 @@
 #include <Windows.h>
 #include "CmdService.h"
 #include "Log.h"
+#include "api.h"
 
 using std::fstream;
 using std::string;
@@ -271,22 +272,11 @@ void CLog::ClearLogFile()
 
     CloseLogFile(); // 关闭流
 
-	char szNewFilePath[MAX_PATH],szIndexFilePath[MAX_PATH];
-
-	sprintf(szIndexFilePath,"%s-index",m_logFilePath);
-
-	int fileCount;
-	FILE *file=fopen(szIndexFilePath,"rw");
-
-	fscanf(file,"%d",&fileCount);
-
-	sprintf(szNewFilePath,"%s-%06d",m_logFilePath);
-	rename(m_logFilePath.c_str(),szNewFilePath);
-
-    m_fileOut.open(m_logFilePath, ios::out | ios::trunc); // 以截断方式打开文件
-    m_openSuccess = m_fileOut.is_open();
-	if(m_openSuccess) {
-		fprintf(file,"%d", fileCount+1);
+	if(FileBackupCount(m_logFilePath.c_str())) {
+		m_fileOut.open(m_logFilePath, ios::out | ios::trunc); // 以截断方式打开文件
+		m_openSuccess = m_fileOut.is_open();
+	} else {
+		m_fileOut.open(m_logFilePath, ios::out | ios::app);
+		m_openSuccess = m_fileOut.is_open();
 	}
-	fclose(file);
 }

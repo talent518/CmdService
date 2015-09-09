@@ -6,8 +6,12 @@
 #include "CmdService.h"
 #include "Log.h"
 #include "LogManager.h"
+#include "api.h"
 
 CmdService::CmdService() {
+	pHeadExecParam=NULL;
+	nCmdSize = 0;
+
 	GetModuleFileName(NULL, m_szConfigFile, MAX_PATH);
 	GetModuleFileName(NULL, m_szLogFile, MAX_PATH);
 
@@ -16,100 +20,63 @@ CmdService::CmdService() {
 }
 
 void CmdService::OnStop() {
+	m_bPaused = false;
+
+	PEXECPARAM ptrExecParam=pHeadExecParam;
+	while(ptrExecParam) {
+		TerminateProcess(ptrExecParam->processId, 4);
+		ptrExecParam = ptrExecParam->next;
+	}
+
 	m_bRunning = false;
 }
 void CmdService::OnPause() {
 	m_bPaused = true;
+
+	PEXECPARAM ptrExecParam=pHeadExecParam;
+	while(ptrExecParam) {
+		TerminateProcess(ptrExecParam->processId, 4);
+		ptrExecParam = ptrExecParam->next;
+	}
 }
 void CmdService::OnContinue() {
 	m_bPaused = false;
-}
-
-typedef struct _execParam{
-	TCHAR keyName[MAX_PATH];
-	TCHAR curDirectory[MAX_PATH];
-	TCHAR cmdLine[MAX_PATH];
-	TCHAR logFile[MAX_PATH];
-
-	struct _execParam *next;
-} EXECPARAM, *PEXECPARAM;
-
-int ExecCommand(TCHAR *cmdLine, TCHAR *logFile, TCHAR *curDirectory)
-{
-	PROCESS_INFORMATION pi; 
-	STARTUPINFO si;
-	BOOL ret = FALSE; 
-	DWORD flags = CREATE_NO_WINDOW;
-	HANDLE h;
-
-	SECURITY_ATTRIBUTES sa;
-	sa.nLength = sizeof(sa);
-	sa.lpSecurityDescriptor = NULL;
-	sa.bInheritHandle = TRUE;
-
-	h = CreateFile(logFile,
-		FILE_APPEND_DATA,
-		FILE_SHARE_WRITE | FILE_SHARE_READ,
-		&sa,
-		CREATE_ALWAYS,
-		FILE_ATTRIBUTE_NORMAL,
-		NULL );
-
-	ZeroMemory( &pi, sizeof(PROCESS_INFORMATION) );
-	ZeroMemory( &si, sizeof(STARTUPINFO) );
-	si.cb = sizeof(STARTUPINFO); 
-	si.dwFlags |= STARTF_USESTDHANDLES;
-	si.wShowWindow =SW_HIDE;
-	si.hStdInput = NULL;
-	si.hStdError = NULL;
-	si.hStdOutput = NULL;
-
-	ret = CreateProcess(NULL, cmdLine, NULL, NULL, TRUE, flags, NULL, curDirectory, &si, &pi);
-
-	WaitForSingleObject(pi.hProcess, INFINITE );
-
-	CloseHandle(h);
-	CloseHandle(pi.hProcess);
-	CloseHandle(pi.hThread);
-
-	return ret;
 }
 
 DWORD WINAPI ThreadProc(LPVOID lpParam)
 {
 	PEXECPARAM pData;
 
-	//Casttheparametertothecorrectdatatype.
 	pData=(PEXECPARAM)lpParam;
 
-	ExecCommand(pData->cmdLine, pData->logFile, pData->curDirectory);
+	pData->processId = NULL;
+	ExecCommand(pData->cmdLine, pData->logFile, pData->curDirectory, NULL, &pData->processId);
+	pData->processId = NULL;
 
 	return 0;
 }
 
 void CmdService::Run() {
-	m_bRunning = true;
 	CLog* log=LogManager::OpenLog(m_szLogFile,CLog::LL_INFO);
+	int i;
 
-	DWORD nBufferSize=32767;
+	DWORD nBufferSize=GetFileSize(m_szConfigFile);
 
-	WIN32_FIND_DATA fileInfo;
-	HANDLE hFind= FindFirstFile(m_szConfigFile ,&fileInfo);
-	if(hFind != INVALID_HANDLE_VALUE && fileInfo.nFileSizeLow > 0)
-		nBufferSize = fileInfo.nFileSizeLow;
-	FindClose(hFind);
+	if(!nBufferSize) {
+		nBufferSize = 32767;
+	}
 
+	PEXECPARAM tmpExecParam=NULL,ptrExecParam;
 	PTCHAR pBuffer= (PTCHAR)HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY, sizeof(TCHAR)*nBufferSize),ptrBuffer,tmpBuffer;
 	DWORD ret = GetPrivateProfileSection("Command", pBuffer, nBufferSize, m_szConfigFile);
 
-	PEXECPARAM pHeadExecParam=NULL,ptrExecParam;
-	int nCmdSize = 0;
-
+	// 读取所有配置的命令
 	if(ret>0) {
 		TCHAR *p;
 		TCHAR tmpDirectory[MAX_PATH]={0};
 		TCHAR configFileDirectory[MAX_PATH]={0};
 		strncpy(configFileDirectory,m_szConfigFile,strrchr(m_szConfigFile,'\\')-m_szConfigFile+1);
+
 		for(ptrBuffer=pBuffer;*ptrBuffer;ptrBuffer+=strlen(ptrBuffer)+1) {
 			ptrExecParam = (PEXECPARAM)HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY, sizeof(EXECPARAM));
 			tmpBuffer=strchr(ptrBuffer,'=');
@@ -133,11 +100,12 @@ void CmdService::Run() {
 			log->WriteLog(CLog::LL_INFO,"keyName(%s), curDirectory(%s), cmdLine(%s), logFile(%s)", ptrExecParam->keyName, ptrExecParam->curDirectory, ptrExecParam->cmdLine, ptrExecParam->logFile);
 #endif
 			ptrExecParam->next = NULL;
-			if(pHeadExecParam) {
-				pHeadExecParam->next = ptrExecParam;
+			if(tmpExecParam) {
+				tmpExecParam->next = ptrExecParam;
 			} else {
 				pHeadExecParam = ptrExecParam;
 			}
+			tmpExecParam = ptrExecParam;
 
 			nCmdSize++;
 
@@ -149,12 +117,12 @@ void CmdService::Run() {
 		return;
 	}
 
-	PDWORD dwThreadId = (PDWORD)HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY, sizeof(DWORD)*nCmdSize);
-	PHANDLE hThread = (PHANDLE)HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY, sizeof(HANDLE)*nCmdSize);
-	int i;
+	dwThreadId = (PDWORD)HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY, sizeof(DWORD)*nCmdSize);
+	hThread = (PHANDLE)HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY, sizeof(HANDLE)*nCmdSize);
+	m_bRunning = true;
 	while (m_bRunning) {
 		if (m_bPaused) {
-			Sleep(1000);
+			Sleep(200);
 			continue;
 		}
 
@@ -165,12 +133,13 @@ void CmdService::Run() {
 			if(hThread[i]==NULL) {
 				log->WriteLog(CLog::LL_ERROR, "[%s] create thread fail", ptrExecParam->keyName);
 			} else {
+				log->WriteLog(CLog::LL_INFO, "[%d] = %s", i, ptrExecParam->keyName);
 				i++;
 			}
 			ptrExecParam = ptrExecParam->next;
 		}
 
-		WaitForMultipleObjects(i, hThread, TRUE,INFINITE);
+		WaitForMultipleObjects(i, hThread, TRUE, INFINITE);
 
 		ptrExecParam=pHeadExecParam;
 		i = 0;
@@ -179,7 +148,8 @@ void CmdService::Run() {
 			i++;
 			ptrExecParam = ptrExecParam->next;
 		}
-		Sleep(10000);
+
+		Sleep(1000);
 	}
 	log->CloseLogFile();
 }

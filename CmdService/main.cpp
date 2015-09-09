@@ -1,10 +1,11 @@
-#include <windows.h>
-#include <tchar.h>
 #include <stdio.h>
+#include <tchar.h>
+#include <windows.h>
 #include <Shlwapi.h>
 #include "CmdService.h"
 #include "ServiceCtrl.h"
 #include "getopt.h"
+#include "api.h"
 
 CmdService cmdService;
 
@@ -33,77 +34,30 @@ static void usage(const char *argv0)
 	}
 	
 	printf( "Usage: %s [options]\n"
-	            "\n"
-				"  confile file format:\n"
-				"    [Command]\n"
-				"    <log suffix>=<command line>\n"
-				"    [Directory]\n"
-				"    <log suffix>=<command line current directory>\n"
-				"  options:\n"
-				"    -h,--help,-?,--usage    This help\n"
-				"    -v                      Version number\n"
-				"\n"
-				"    -n <service name>       set service name\n"
-				"    -f <config file>        set service config file\n"
-				"    -l <log file>           set service log file\n"
-				"    -c install              install service\n"
-				"    -c unstall              unstall service\n"
-				"    -c start                start service\n"
-				"    -c stop                 stop service\n"
-				"    -c restart              restart service\n"
-				"    -c status               service status\n"
-				, prog);
+	    "\n"
+		"  confile file format:\n"
+		"    [Command]\n"
+		"    <log suffix>=<command line>\n"
+		"    [Directory]\n"
+		"    <log suffix>=<command line current directory>\n"
+		"    [Environment]\n"
+		"    <log suffix>=<environment variable>\n"
+		"  options:\n"
+		"    -h,--help,-?,--usage    This help\n"
+		"    -v                      Version number\n"
+		"\n"
+		"    -n <service name>       set service name\n"
+		"    -f <config file>        set service config file\n"
+		"    -l <log file>           set service log file\n"
+		"    -c install              install service\n"
+		"    -c unstall              unstall service\n"
+		"    -c start                start service\n"
+		"    -c stop                 stop service\n"
+		"    -c restart              restart service\n"
+		"    -c status               service status\n"
+		, prog);
 }
 
-LPCTSTR GetFileVersion(LPCTSTR lpszFilePath)
-{
-	TCHAR *szResult="0.0.0.0";
-
-	if (PathFileExists(lpszFilePath))
-	{
-		VS_FIXEDFILEINFO *pVerInfo = NULL;
-		DWORD dwTemp, dwSize;
-		BYTE *pData = NULL;
-		UINT uLen;
-
-		dwSize = GetFileVersionInfoSize(lpszFilePath, &dwTemp);
-		if (dwSize == 0)
-		{
-			return szResult;
-		}
-
-		pData = new BYTE[dwSize+1];
-		if (pData == NULL)
-		{
-			return szResult;
-		}
-
-		if (!GetFileVersionInfo(lpszFilePath, 0, dwSize, pData))
-		{
-			delete[] pData;
-			return szResult;
-		}
-
-		if (!VerQueryValue(pData, TEXT("\\"), (void **)&pVerInfo, &uLen)) 
-		{
-			delete[] pData;
-			return szResult;
-		}
-
-		DWORD verMS = pVerInfo->dwFileVersionMS;
-		DWORD verLS = pVerInfo->dwFileVersionLS;
-		DWORD major = HIWORD(verMS);
-		DWORD minor = LOWORD(verMS);
-		DWORD build = HIWORD(verLS);
-		DWORD revision = LOWORD(verLS);
-		delete[] pData;
-
-		szResult=new TCHAR[20];
-		sprintf(szResult,"%d.%d.%d.%d", major, minor, build, revision);
-	}
-
-	return szResult;
-}
 int main(int argc, char *argv[]) {
 	char *optarg = NULL;
 	char *servName = NULL;
