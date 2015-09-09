@@ -134,8 +134,6 @@ int main(int argc, char *argv[]) {
 
 		sprintf(binPath,"\"%s\" -c runservice -n %s -f \"%s\" -l \"%s\"", szFilePath, cmdService.m_szServiceName, cmdService.m_szConfigFile, cmdService.m_szLogFile);
 
-		printf("%s\n",binPath);
-
 		if(cmdService.Install(binPath)) {
 			printf("Install service success.\n");
 			return 0;
