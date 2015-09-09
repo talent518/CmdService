@@ -133,7 +133,9 @@ void CmdService::Run() {
 			if(hThread[i]==NULL) {
 				log->WriteLog(CLog::LL_ERROR, "[%s] create thread fail", ptrExecParam->keyName);
 			} else {
+#ifdef _DEBUG
 				log->WriteLog(CLog::LL_INFO, "[%d] = %s", i, ptrExecParam->keyName);
+#endif
 				i++;
 			}
 			ptrExecParam = ptrExecParam->next;

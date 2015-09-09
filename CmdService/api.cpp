@@ -120,6 +120,10 @@ int ExecCommand(TCHAR *cmdLine, TCHAR *logFile, TCHAR *curDirectory, LPDWORD exi
 	sa.lpSecurityDescriptor = NULL;
 	sa.bInheritHandle = TRUE;
 
+	if(GetFileSize(logFile) > 10*1024*1024) {
+		FileBackupCount(logFile);
+	}
+
 	logStdOut = CreateFile(logFile, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, &sa, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL );
 
 	DWORD dwHigh;
