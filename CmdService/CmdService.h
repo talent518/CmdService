@@ -10,6 +10,7 @@ typedef struct _execParam{
 	TCHAR logFile[MAX_PATH];
 
 	HANDLE processId;
+	HANDLE hToken;
 
 	struct _execParam *next;
 } EXECPARAM, *PEXECPARAM;

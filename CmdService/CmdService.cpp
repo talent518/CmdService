@@ -50,7 +50,7 @@ DWORD WINAPI ThreadProc(LPVOID lpParam)
 	pData=(PEXECPARAM)lpParam;
 
 	pData->processId = NULL;
-	ExecCommand(pData->cmdLine, pData->logFile, pData->curDirectory, NULL, &pData->processId);
+	ExecCommand(pData->cmdLine, pData->logFile, pData->curDirectory, NULL, &pData->processId, pData->hToken);
 	pData->processId = NULL;
 
 	return 0;
@@ -117,6 +117,19 @@ void CmdService::Run() {
 		return;
 	}
 
+	TCHAR domain[100], userName[100], passWord[100];
+	HANDLE hToken = NULL;
+
+	GetPrivateProfileString("Account", "Domain", ".", domain, sizeof(domain)-1, m_szConfigFile);
+	GetPrivateProfileString("Account", "User", "Administrator", userName, sizeof(userName)-1, m_szConfigFile);
+	GetPrivateProfileString("Account", "Password", "", passWord, sizeof(passWord)-1, m_szConfigFile);
+	ret = LogonUser(userName, domain, passWord, LOGON32_LOGON_INTERACTIVE, LOGON32_PROVIDER_DEFAULT, &hToken);
+	if(ret) {
+		log->WriteLog(CLog::LL_INFO, "Login success(Domain=%s, User=%s, Password=%s)", domain, userName, passWord);
+	} else {
+		log->WriteLog(CLog::LL_WARN, "Login fail(Domain=%s, User=%s, Password=%s)", domain, userName, passWord);
+	}
+
 	dwThreadId = (PDWORD)HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY, sizeof(DWORD)*nCmdSize);
 	hThread = (PHANDLE)HeapAlloc(GetProcessHeap(),HEAP_ZERO_MEMORY, sizeof(HANDLE)*nCmdSize);
 	m_bRunning = true;
@@ -129,6 +142,7 @@ void CmdService::Run() {
 		ptrExecParam=pHeadExecParam;
 		i=0;
 		while(ptrExecParam) {
+			ptrExecParam->hToken = hToken;
 			hThread[i]=CreateThread(NULL, 0, ThreadProc, ptrExecParam, 0, &dwThreadId[i]);
 			if(hThread[i]==NULL) {
 				log->WriteLog(CLog::LL_ERROR, "[%s] create thread fail", ptrExecParam->keyName);

@@ -103,7 +103,7 @@ int ExecCommand(TCHAR *cmdLine, TCHAR *logFile, TCHAR *curDirectory, LPDWORD exi
 	return ExecCommand(cmdLine, logFile, curDirectory, exitCode, NULL);
 }
 
-int ExecCommand(TCHAR *cmdLine, TCHAR *logFile, TCHAR *curDirectory, LPDWORD exitCode, PHANDLE processId)
+int ExecCommand(TCHAR *cmdLine, TCHAR *logFile, TCHAR *curDirectory, LPDWORD exitCode, PHANDLE processId, HANDLE hToken)
 {
 	PROCESS_INFORMATION pi; 
 	STARTUPINFO si;
@@ -139,7 +139,10 @@ int ExecCommand(TCHAR *cmdLine, TCHAR *logFile, TCHAR *curDirectory, LPDWORD exi
 	si.hStdError = logStdOut;
 	si.hStdOutput = logStdOut;
 
-	ret = CreateProcess(NULL, cmdLine, &sa, &sa, sa.bInheritHandle, flags, NULL, curDirectory, &si, &pi);
+	if(hToken)
+		ret = CreateProcessAsUser(hToken, NULL, cmdLine, &sa, &sa, sa.bInheritHandle, flags, NULL, curDirectory, &si, &pi);
+	else
+		ret = CreateProcess(NULL, cmdLine, &sa, &sa, sa.bInheritHandle, flags, NULL, curDirectory, &si, &pi);
 	if(ret) {
 		if(processId)
 			*processId = pi.hProcess;
