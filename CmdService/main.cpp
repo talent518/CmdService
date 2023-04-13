@@ -26,11 +26,11 @@ static void usage(const char *argv0)
 {
 	const char *prog;
 
-	prog = strrchr(argv0, '/');
+	prog = strrchr(argv0, '\\');
 	if (prog) {
 		prog++;
 	} else {
-		prog = "php";
+		prog = argv0;
 	}
 	
 	printf( "Usage: %s [options]\n"
@@ -58,7 +58,7 @@ static void usage(const char *argv0)
 		, prog);
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[], char *envp[]) {
 	char *optarg = NULL;
 	char *servName = NULL;
 	char *signalArg = NULL;

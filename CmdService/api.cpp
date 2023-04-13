@@ -32,7 +32,7 @@ bool FileBackupCount(const char *filePath) {
 
 	fscanf(file,"%d",&fileCount);
 
-	sprintf(szNewFilePath,"%s-%06d",filePath);
+	sprintf(szNewFilePath,"%s-%06d",filePath, fileCount+1);
 	if(rename(filePath, szNewFilePath)) {
 		fclose(file);
 		return false;
