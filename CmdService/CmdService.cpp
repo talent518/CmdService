@@ -46,11 +46,12 @@ void CmdService::OnContinue() {
 DWORD WINAPI ThreadProc(LPVOID lpParam)
 {
 	PEXECPARAM pData;
+	DWORD exitCode = 0;
 
 	pData=(PEXECPARAM)lpParam;
 
 	pData->processId = NULL;
-	ExecCommand(pData->cmdLine, pData->logFile, pData->curDirectory, NULL, &pData->processId, pData->hToken);
+	ExecCommand(pData->cmdLine, pData->logFile, pData->curDirectory, &exitCode, &pData->processId, pData->hToken);
 	pData->processId = NULL;
 
 	return 0;
